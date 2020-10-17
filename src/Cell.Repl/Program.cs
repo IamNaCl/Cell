@@ -12,8 +12,10 @@ class Program
     private static void PrintError(string errorMessage) =>
         Console.Error.WriteLine($"error: {errorMessage ?? "Unknown error."}");
 
-    // To be updated.
-    static void Main(string[] args)
+    /// <summary>
+    /// Runs the REPL program.
+    /// </summary>
+    private static void RunRepl()
     {
         bool needMore = false;
         IList<Token> tokenList = new List<Token>();
@@ -49,4 +51,7 @@ class Program
             }
         }
     }
+
+    // To be updated with a proper CLI.
+    static void Main(string[] args) => RunRepl();
 }

@@ -18,7 +18,7 @@ namespace Cell.Lexer
             new NameDefinition(),
             new NumberDefinition(),
             new StringDefinition(),
-            new CellDefinition(),
+            CellDefinition.Instance,
             new OperatorDefinition()
         };
         #endregion

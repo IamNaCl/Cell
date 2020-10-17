@@ -23,9 +23,11 @@ namespace Cell.Parser
             [TokenType.LessEq] = "LESS_EQUAL",
             [TokenType.Equal] = "EQUAL",
             [TokenType.NotEqual] = "NOT_EQUAL",
-            [TokenType.Ampersand] = "CONCAT"
+            [TokenType.Ampersand] = "CONCAT",
+            [TokenType.Cell] = "GET_CELL"
         };
         #endregion
+
         #region Match and Eat
         /// <summary>
         /// Matches the current token against a certain type.
@@ -183,6 +185,36 @@ namespace Cell.Parser
                     source.MatchAndEat(TokenType.BracketR, out error);
                     return expr;
                 }
+                case TokenType.Cell:
+                {
+                    // Match the cell.
+                    source.MatchAndEat(TokenType.Cell, out error);
+                    try
+                    {
+                        var begin = current.Value.ToCellPosition();
+
+                        // The tokens say that this is actually a range, not a single cell.
+                        if (source.Current == TokenType.Cell)
+                        {
+                            var end = source.Current.Value.ToCellPosition();
+                            return new FunctionCallExpression("GET_RANGE", new List<IExpression>
+                            {
+                                new LiteralExpression(begin.X), new LiteralExpression(begin.Y),
+                                new LiteralExpression(end.X), new LiteralExpression(end.Y),
+                            });
+                        }
+
+                        // Otherwise, just return the range with literals.
+                        return new FunctionCallExpression("GET_CELL", new List<IExpression>
+                        {
+                            new LiteralExpression(begin.X), new LiteralExpression(begin.Y),
+                        });
+                    }
+                    catch
+                    {
+                        error = "Numeric value in cell or range is too big.";
+                    }
+                } break;
             }
 
             return null;
