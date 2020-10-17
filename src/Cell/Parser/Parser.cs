@@ -78,6 +78,9 @@ namespace Cell.Parser
         {
             var left = upper(source, out error);
 
+            if (condition((TokenType)source.Current) && left is null)
+                return null;
+
             while (condition((TokenType)source.Current))
             {
                 var type = (TokenType)source.Current;
@@ -112,6 +115,8 @@ namespace Cell.Parser
                                               out string error)
         {
             var left = upper(source, out error);
+            if (condition((TokenType)source.Current) && left is null)
+                return null;
 
             if (condition((TokenType)source.Current))
             {
@@ -139,7 +144,7 @@ namespace Cell.Parser
             error = null;
             var current = source.Current;
 
-            switch (current.Type)
+            switch ((TokenType)current)
             {
                 case TokenType.Number:
                 {

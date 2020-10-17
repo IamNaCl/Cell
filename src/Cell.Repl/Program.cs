@@ -34,10 +34,10 @@ class Program
                 {
                     var expression = Parser.Parse(tokenList, out errorString);
 
-                    if (expression is null || errorString is object)
-                        PrintError(errorString);
-                    else
+                    if (expression is object)
                         Console.WriteLine(expression.Inspect());
+                    else if (expression is null && errorString is object)
+                        PrintError(errorString);
 
                     break;
                 }
