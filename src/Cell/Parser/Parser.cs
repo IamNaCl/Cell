@@ -140,6 +140,15 @@ namespace Cell.Parser
         #endregion
 
         #region Parser Functions
+        private static bool IsInvalidCellIndex(this string str, out string error)
+        {
+            error = null;
+            if (str is null || str.Length > 9)
+                error = "Cell index has more than 9 digits.";
+
+            return error is object;
+        }
+
         // Parses an arithmethic factor.
         private static IExpression ParseFactor(this IEnumerator<Token> source, out string error)
         {
@@ -187,34 +196,33 @@ namespace Cell.Parser
                 }
                 case TokenType.Cell:
                 {
-                    // Match the cell.
+                    // All of this implementation for cell is dirty. TODO: Clean things up a bit.
+                    int begin = 0, end = 0;
                     source.MatchAndEat(TokenType.Cell, out error);
-                    try
-                    {
-                        var begin = current.Value.ToCellPosition();
 
-                        // The tokens say that this is actually a range, not a single cell.
-                        if (source.Current == TokenType.Cell)
-                        {
-                            var end = source.Current.Value.ToCellPosition();
-                            return new FunctionCallExpression("GET_RANGE", new List<IExpression>
-                            {
-                                new LiteralExpression(begin.X), new LiteralExpression(begin.Y),
-                                new LiteralExpression(end.X), new LiteralExpression(end.Y),
-                            });
-                        }
+                    // Greater than "$123456789"
+                    if (current.Value.IsInvalidCellIndex(out error))
+                        return null;
 
-                        // Otherwise, just return the range with literals.
-                        return new FunctionCallExpression("GET_CELL", new List<IExpression>
-                        {
-                            new LiteralExpression(begin.X), new LiteralExpression(begin.Y),
-                        });
-                    }
-                    catch
+                    // Convert it to integer.
+                    begin = int.Parse(current.Value);
+
+                    // Did we get another cell right after the first one?
+                    if ((TokenType)source.Current == TokenType.Cell)
                     {
-                        error = "Numeric value in cell or range is too big.";
+                        if (source.Current.Value.IsInvalidCellIndex(out error))
+                            return null;
+
+                        end = int.Parse(source.Current.Value);
+
+                        source.MatchAndEat(TokenType.Cell, out error);
+                        return new FunctionCallExpression("GET_RANGE", new LiteralExpression(begin),
+                                                          new LiteralExpression(end));
                     }
-                } break;
+
+                    // It is a cell by default so, return it.
+                    return new FunctionCallExpression(_functions[TokenType.Cell], new LiteralExpression(begin));
+                }
             }
 
             return null;

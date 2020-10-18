@@ -12,9 +12,16 @@ namespace Cell.Runtime
         string Name { get; }
 
         /// <summary>
-        /// Gets the count of arguments required to invoke this function.
+        /// Gets the count of parameters required to invoke this function.
         /// </summary>
-        int ArgumentCount { get; }
+        int ParameterCount { get; }
+
+        /// <summary>
+        /// Gets whether this function accepts a variable number of arguments aside from those that are predefined in
+        /// the argument count, for example: a variadic function where the `ArgumentCount` property is set to 3 will
+        /// require at least 3 arguments in order to be invoked.
+        /// </summary>
+        bool IsVariadic { get; }
 
         /// <summary>
         /// Invokes this function.

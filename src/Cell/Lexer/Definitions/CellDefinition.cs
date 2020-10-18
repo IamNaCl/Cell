@@ -5,18 +5,11 @@ namespace Cell.Lexer.Definitions
     /// </summary>
     class CellDefinition : TokenDefinition
     {
-        #region Statics
-        private static CellDefinition _instance = null;
-
-        /// <summary>
-        /// Gets the reference to the static instance of the CellDefinition class.
-        /// </summary>
-        public static CellDefinition Instance => _instance is object? _instance: (_instance = new CellDefinition());
-        #endregion
+        public override string Process(string token) => token.Substring(1, token.Length - 1);
 
         /// <summary>
         /// Creates a new instance of the CellDefinition class.
         /// </summary>
-        public CellDefinition() : base(TokenType.Cell, @"[$:]([a-zA-Z]{1,4})([0-9]+)") { }
+        public CellDefinition() : base(TokenType.Cell, @"[$:][0-9]+") { }
     }
 }
