@@ -26,11 +26,15 @@ namespace Cell.Runtime
         /// <inheritdoc/>
         public object Invoke(ICellContext ctx, IList<IExpression> arguments, out string error)
         {
+            error = null;
             if (arguments?.Count != ParameterCount && !IsVariadic)
-                throw new InvalidOperationException($"{Name}: Argument count differs from parameter count.");
+                error = $"{Name}: argument count differs from parameter count.";
 
             if (IsVariadic && arguments?.Count < ParameterCount)
-                throw new InvalidOperationException($"{Name}: Function requires at least {ParameterCount} arguments.");
+                error = $"{Name}: function requires {(IsVariadic? "at least": "")} {ParameterCount} arguments.";
+
+            if (error is object)
+                return null;
 
             return _func(ctx, arguments ?? new List<IExpression>(), out error);
         }

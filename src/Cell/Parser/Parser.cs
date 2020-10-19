@@ -170,17 +170,27 @@ namespace Cell.Parser
                 case TokenType.Name:
                 {
                     source.MatchAndEat(TokenType.Name, out error);
-                    IList<IExpression> args = null;
+                    IList<IExpression> args = new List<IExpression>();
                     // After matching, is it a function call?
                     if (source.Current == TokenType.BracketL)
                     {
-                        // Tell the parser that we want another expression, which should be parenthesized.
-                        args = source.ParseExpression(out error) switch
+                        source.MatchAndEat(TokenType.BracketL, out error);
+                        while (source.Current is object && source.Current != TokenType.BracketR)
                         {
-                            BlockExpression block => block.Body,
-                            IExpression expr => new List<IExpression> { expr },
-                            _ => null
-                        };
+                            // Get the argument and if it failed, just abort.
+                            var arg = source.ParseExpression(out error);
+                            if (arg is null)
+                            {
+                                error = "empty expression in function arguments.";
+                                return null;
+                            }
+
+                            if (source.Current == TokenType.Comma)
+                                source.MatchAndEat(TokenType.Comma, out error);
+
+                            args.Add(arg);
+                        }
+                        source.MatchAndEat(TokenType.BracketR, out error);
                     }
 
                     // Now cast the stuff into a function call expression.
@@ -191,6 +201,8 @@ namespace Cell.Parser
                 {
                     source.MatchAndEat(TokenType.BracketL, out error);
                     var expr = ParseExpression(source, out error);
+                    if (expr is null)
+                        return null;
                     source.MatchAndEat(TokenType.BracketR, out error);
                     return expr;
                 }

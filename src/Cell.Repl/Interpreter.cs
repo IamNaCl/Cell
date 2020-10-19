@@ -48,6 +48,18 @@ namespace Cell.Repl
                             result = expr.Evaluate(context, out error);
                             if (error is object)
                                 goto case TokenizerResult.Error;
+
+                            string str = null;
+                            if (result is IDictionary<int, object> dict)
+                                str = $"[ {string.Join(", ", dict)} ]";
+                            else if (result is IList<object> objs)
+                                str = $"[ {string.Join(", ", objs)} ]";
+                            else
+                                str = result?.ToString() ?? null;
+
+                            if (str is object)
+                                Console.WriteLine(str);
+
                         } break;
                         case TokenizerResult.Error:
                         {
