@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -18,6 +19,16 @@ namespace Cell.Runtime
 
         // Collection of cells.
         private IDictionary<int, object> _cells;
+
+        // Standard input stream.
+        private TextReader _stdin;
+
+        // Standard output and standard error streams.
+        private TextWriter _stdout, _stderr;
+
+        private bool _leaveReadersOpen = false, _leaveWritersOpen = false;
+
+        private bool _disposed = false;
         #endregion
 
         #region Indexers
@@ -70,6 +81,9 @@ namespace Cell.Runtime
         /// <inheritdoc/>
         public object GetCell(int index)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(CellContext));
+
             lock (_syncLock)
                 return _cells.TryGetValue(index, out var val)? val: null;
         }
@@ -77,6 +91,9 @@ namespace Cell.Runtime
         /// <inheritdoc/>
         public void SetCell(int index, object value)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(CellContext));
+
             lock (_syncLock)
             {
                 _cells[index] = value;
@@ -88,6 +105,9 @@ namespace Cell.Runtime
         /// <inheritdoc/>
         public IReadOnlyDictionary<int, object> GetRange(int start, int end)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(CellContext));
+
             // Condition that we'll be using
             int increase = end >= start? 1: -1;
             var condition = GetCondition(increase == 1);
@@ -103,6 +123,9 @@ namespace Cell.Runtime
         /// <inheritdoc/>
         public void SetRange(int startIndex, int endIndex, object value)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(CellContext));
+
             lock (_syncLock)
             {
                 // Swap to make it always from smallest to biggest.
@@ -123,6 +146,9 @@ namespace Cell.Runtime
         /// <inheritdoc/>
         public void SetRange(int sourceStart, int sourceEnd, int destStart, int destEnd)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(CellContext));
+
             lock (_syncLock)
             {
                 var sourceRange = GetRange(sourceStart, sourceEnd).Values.ToArray();
@@ -139,6 +165,9 @@ namespace Cell.Runtime
         /// <returns>Instance of IFunction or null if no function exists with the given name.</returns>
         public IFunction GetFunction(string funcName)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(CellContext));
+
             if (funcName is null)
                 throw new ArgumentNullException(nameof(funcName));
 
@@ -154,6 +183,9 @@ namespace Cell.Runtime
         /// <param name="function">Function to add/insert into the functions dictionary.</param>
         public void AddFunction(IFunction function)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(CellContext));
+
             if (function is object)
                 lock (_syncLock)
                     _functions[function.Name] = function;
@@ -164,10 +196,48 @@ namespace Cell.Runtime
         /// <summary>
         /// Creates a new instance of the CellContext class.
         /// </summary>
-        public CellContext()
+        /// <param name="stdin">Text reader for standard input.</param>
+        /// <param name="stdout">Text writer for standard output.</param>
+        /// <param name="stderr">Text writer for standard error.</param>
+        /// <param name="leaveReaderOpen">Should this instance of CellContext leave stdin open?</param>
+        /// <param name="leaveWritersOpen">Should this instance of CellContext leave stdout and stderr open?</param>
+        public CellContext(TextReader stdin = null, TextWriter stdout = null, TextWriter stderr = null,
+                           bool leaveReaderOpen = true, bool leaveWritersOpen = true)
         {
             _cells = new Dictionary<int, object>();
             _functions = new Dictionary<string, IFunction>(StringComparer.OrdinalIgnoreCase);
+            _leaveReadersOpen = leaveReaderOpen;
+            _leaveWritersOpen = leaveWritersOpen;
+            _stdin = stdin ?? Console.In;
+            _stdout = stdout ?? Console.Out;
+            _stderr = stderr ?? Console.Error;
+        }
+        #endregion
+
+        #region IDisposable
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                lock (_syncLock)
+                {
+                    if (!_leaveReadersOpen)
+                        if (!ReferenceEquals(_stdin, Console.In))
+                            _stdin?.Dispose();
+
+                    if (!_leaveWritersOpen)
+                    {
+                        if (!ReferenceEquals(_stdout, Console.Out))
+                            _stdout?.Dispose();
+                        if (!ReferenceEquals(_stderr, Console.Error))
+                            _stderr?.Dispose();
+                    }
+
+                    _cells.Clear();
+                    _functions.Clear();
+                    _disposed = true;
+                }
+            }
         }
         #endregion
     }

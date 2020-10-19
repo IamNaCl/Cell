@@ -1,61 +1,62 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
-using Cell.Lexer;
-using Cell.Parser;
+using CommandLine;
+using Cell.Repl;
 
 class Program
 {
     /// <summary>
-    /// Prints an error thru the error stream in the Console class.
+    /// Opens a file.
     /// </summary>
-    /// <param name="errorMessage">Message to print.</param>
-    private static void PrintError(string errorMessage) =>
-        Console.Error.WriteLine($"error: {errorMessage ?? "Unknown error."}");
-
-    /// <summary>
-    /// Runs the REPL program.
-    /// </summary>
-    private static void RunRepl()
+    /// <param name="path">Path to the file to open.</param>
+    /// <returns>TextReader.</returns>
+    static TextReader OpenFile(string path)
     {
-        bool needMore = false;
-        var context = new Cell.Runtime.CellContext();
-        IList<Token> tokenList = new List<Token>();
-        while (true)
+        try
         {
-            // If we don't need more tokens at the beginning of the loop, it means that the previous attempt to execute
-            // a statement was in vain, so let's clear everything up.
-            if (!needMore)
-                tokenList.Clear();
-
-            Console.Write(needMore? ".. ": "$$ ");
-            needMore = false;
-            string input = Console.ReadLine();
-
-            switch (Tokenizer.Tokenize(input, ref tokenList, out var errorString))
-            {
-                case TokenizerResult.Ok:
-                {
-                    var expression = Parser.Parse(tokenList, out errorString);
-                    if (expression is object)
-                    {
-                        var result = expression.Evaluate(context, out errorString);
-                        if (errorString is object)
-                            PrintError(errorString);
-                    }
-                    else if (expression is null && errorString is object)
-                        PrintError(errorString);
-
-                    break;
-                }
-                case TokenizerResult.Error:
-                    PrintError(errorString); break;
-
-                case TokenizerResult.NeedsMore:
-                    needMore = true; break;
-            }
+            return File.OpenText(path);
         }
+        catch (Exception e)
+        {
+            Console.WriteLine($"error: {e}");
+            Environment.Exit(1);
+        }
+        return null;
     }
 
-    // To be updated with a proper CLI.
-    static void Main(string[] args) => RunRepl();
+    /// <summary>
+    /// Executes after parsing the command line arguments.
+    /// </summary>
+    /// <param name="opts">Options sent from the command line.</param>
+    static void RunOptions(CommandLineOptions opts)
+    {
+        bool isInteractive = false;
+        TextReader input = null;
+        if (opts.InputFile is object)
+            input = OpenFile(opts.InputFile);
+        else if (opts.EvaluateString is object)
+            input = new StringReader(opts.EvaluateString);
+        else
+        {
+            input = Console.In;
+            isInteractive = !Console.IsInputRedirected && !Console.IsOutputRedirected;
+        }
+
+        Interpreter.Run(input, isInteractive);
+    }
+
+    /// <summary>
+    /// Handles command line argument parser errors.
+    /// </summary>
+    /// <param name="errs">Enumerable of errors.</param>
+    static void HandleParseError(IEnumerable<Error> errs) =>
+        Console.WriteLine("Something happened while parsing command line arguments.");
+
+    static void Main(string[] args)
+    {
+        CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args)
+            .WithParsed(RunOptions)
+            .WithNotParsed(HandleParseError);
+    }
 }
