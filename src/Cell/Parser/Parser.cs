@@ -201,8 +201,40 @@ namespace Cell.Parser
                 {
                     source.MatchAndEat(TokenType.BracketL, out error);
                     var expr = ParseExpression(source, out error);
+                    // Is the previous one null? We don't do that here: "(, <expr>)"
                     if (expr is null)
+                    {
+                        error = "empty expression within brackets.";
                         return null;
+                    }
+
+                    // Are we gathering multiple statements?
+                    if (source.Current == TokenType.Comma)
+                    {
+
+                        // Create our brand new list of expressions for the block expression.
+                        // Then iterate until the end of the enumerator.
+                        var body = new List<IExpression> { expr };
+                        while (error is null && source.Current == TokenType.Comma)
+                        {
+                            // Ignore the comma and get the next expression.
+                            source.MatchAndEat(TokenType.Comma, out error);
+                            expr = source.ParseConcatenation(out error);
+
+                            // If the next expression is null, again, we don't do that here: "(<expr>, )"
+                            if (expr is null)
+                            {
+                                error = $"empty expression after comma in block expression.";
+                                return null;
+                            }
+
+                            // Add the next expression to the list.
+                            body.Add(expr);
+                        }
+
+                        // We got our block, we're good to go.
+                        expr = new BlockExpression(body);
+                    }
                     source.MatchAndEat(TokenType.BracketR, out error);
                     return expr;
                 }
@@ -254,7 +286,7 @@ namespace Cell.Parser
                 // In case of something like this happens: --5.
                 if (factor is null)
                 {
-                    error = $"Unexpected token: '{((TokenType)source.Current).AsString()}'";
+                    error = $"unexpected token: '{((TokenType)source.Current).AsString()}'";
                     return null;
                 }
 
@@ -295,52 +327,14 @@ namespace Cell.Parser
 
         // <equality> & <equality>
         private static IExpression ParseConcatenation(this IEnumerator<Token> source, out string error) =>
-            source.ParseIf(ParseEquality,
+            source.ParseWhile(ParseEquality,
                            _ => _functions[_],
                            _ => _ == TokenType.Ampersand,
                            out error);
 
-        private static IExpression ParseExpression(this IEnumerator<Token> source, out string error)
-        {
+        private static IExpression ParseExpression(this IEnumerator<Token> source, out string error) =>
             // Get the current statement/expression.
-            var expr = source.ParseConcatenation(out error);
-
-            // Are we gathering multiple statements?
-            if (source.Current == TokenType.Comma)
-            {
-                // Is the previous one null? We don't do that here: "(, <expr>)"
-                if (expr is null)
-                {
-                    error = "Empty expression before comma in block.";
-                    return null;
-                }
-
-                // Create our brand new list of expressions for the block expression.
-                // Then iterate until the end of the enumerator.
-                var body = new List<IExpression> { expr };
-                while (error is null && source.Current == TokenType.Comma)
-                {
-                    // Ignore the comma and get the next expression.
-                    source.MatchAndEat(TokenType.Comma, out error);
-                    expr = source.ParseConcatenation(out error);
-
-                    // If the next expression is null, again, we don't do that here: "(<expr>, )"
-                    if (expr is null)
-                    {
-                        error = $"Empty expression after comma in block expression.";
-                        return null;
-                    }
-
-                    // Add the next expression to the list.
-                    body.Add(expr);
-                }
-
-                // We got our block, we're good to go.
-                expr = new BlockExpression(body);
-            }
-
-            return expr;
-        }
+            source.ParseConcatenation(out error);
         #endregion
 
         #region Parse
@@ -359,7 +353,13 @@ namespace Cell.Parser
             // Get the enumerator and set the first token.
             var enumerator = tokens.GetEnumerator();
             enumerator.MoveNext();
-            return enumerator.ParseExpression(out error);
+            var result = enumerator.ParseExpression(out error);
+            if (enumerator.Current is object)
+            {
+                error = "there are tokens left on input, are you missing a pair of brackets?";
+                result = null;
+            }
+            return result;
         }
         #endregion
     }
