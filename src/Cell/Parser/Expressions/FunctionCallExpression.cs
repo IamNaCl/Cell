@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Cell.Runtime;
 
@@ -8,13 +9,11 @@ namespace Cell.Parser.Expressions
     /// </summary>
     class FunctionCallExpression : IExpression
     {
-        private static IExpression _invalid = new LiteralExpression("<invalid>");
-
         #region Properties
         /// <summary>
         /// Gets the expression that should return the function name for this call.
         /// </summary>
-        public IExpression Function { get; private set; }
+        public string FunctionName { get; private set; }
 
         /// <summary>
         /// Gets the collection of arguments to process.
@@ -28,16 +27,8 @@ namespace Cell.Parser.Expressions
         /// </summary>
         /// <param name="func">Literal name of the function to execute.</param>
         /// <param name="args">Arguments to this function.</param>
-        public FunctionCallExpression(IExpression func, System.Collections.Generic.IList<IExpression> args) =>
-            (Function, Arguments) = (func ?? _invalid, args ?? new System.Collections.Generic.List<IExpression>());
-
-        /// <summary>
-        /// Creates a new instance of the FunctionCallExpression class.
-        /// </summary>
-        /// <param name="functionName">String version of the function name.</param>
-        /// <param name="args">Arguments to this function.</param>
-        public FunctionCallExpression(string functionName, System.Collections.Generic.IList<IExpression> args)
-            : this(new LiteralExpression(functionName), args) { }
+        public FunctionCallExpression(string func, System.Collections.Generic.IList<IExpression> args) =>
+            (FunctionName, Arguments) = (func ?? "<invalid>", args ?? new System.Collections.Generic.List<IExpression>());
 
         /// <summary>
         /// Creates a new instance of the FunctionCallExpression class with one argument.
@@ -59,11 +50,19 @@ namespace Cell.Parser.Expressions
 
         #region IExpression
         /// <inheritdoc/>
-        public object Evaluate(ICellContext context) => throw new System.NotImplementedException(); // TODO.
+        public object Evaluate(ICellContext context, out string error)
+        {
+            error = null;
+            var func = context[FunctionName];
+            if (func is null)
+                error = $"{FunctionName} is not a function.";
+
+            return func?.Invoke(context, Arguments, out error);
+        }
 
         /// <inheritdoc/>
         public string Inspect() =>
-            $"{Function.Inspect()}({string.Join(", ", Arguments.Select(_ => _?.Inspect() ?? null))})";
+            $"{FunctionName}({string.Join(", ", Arguments.Select(_ => _?.Inspect() ?? null))})";
         #endregion
     }
 }

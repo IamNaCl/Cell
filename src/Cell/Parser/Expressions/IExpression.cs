@@ -10,16 +10,19 @@ namespace Cell.Parser.Expressions
         /// <summary>
         /// Evaluates an expression that produces a value.
         /// </summary>
+        /// <param name="context">Context to operate on.</param>
+        /// <param name="error">Output error message, in case of error.</param>
         /// <returns>Result of this expression.</returns>
-        object Evaluate(Runtime.ICellContext context);
+        object Evaluate(Runtime.ICellContext context, out string error);
 
         /// <summary>
         /// Generic version of Evaluate, basically returns object as T.
         /// </summary>
         /// <param name="context">Context to operate on.</param>
+        /// <param name="error">Output error message, in case of error.</param>
         /// <typeparam name="T">Result type for this function.</typeparam>
         /// <returns>Result of this expression.</returns>
-        T Evaluate<T>(Runtime.ICellContext context) => (T)Evaluate(context);
+        T Evaluate<T>(Runtime.ICellContext context, out string error) => (T)Evaluate(context, out error);
 
         /// <summary>
         /// Inspects this expression.

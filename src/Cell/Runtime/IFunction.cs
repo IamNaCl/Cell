@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Cell.Runtime
 {
     /// <summary>
@@ -26,8 +28,10 @@ namespace Cell.Runtime
         /// <summary>
         /// Invokes this function.
         /// </summary>
+        /// <param name="context">Context to operate on.</param>
         /// <param name="arguments">Collection of arguments passed to this function.</param>
+        /// <param name="error">Output error message.</param>
         /// <returns>Value returned by the interpreted function.</returns>
-        object Invoke(System.Collections.Generic.IList<Parser.Expressions.IExpression> arguments);
+        object Invoke(ICellContext context, IList<Parser.Expressions.IExpression> arguments, out string error);
     }
 }

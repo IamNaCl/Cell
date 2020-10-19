@@ -135,17 +135,17 @@ namespace Cell.Runtime
         /// <summary>
         /// Gets a function by its name (case insensitive).
         /// </summary>
-        /// <param name="functionName">Name of the function to look up.</param>
+        /// <param name="funcName">Name of the function to look up.</param>
         /// <returns>Instance of IFunction or null if no function exists with the given name.</returns>
-        public IFunction GetFunction(string functionName)
+        public IFunction GetFunction(string funcName)
         {
-            if (functionName is null)
-                throw new ArgumentNullException(nameof(functionName));
+            if (funcName is null)
+                throw new ArgumentNullException(nameof(funcName));
 
-            if (string.IsNullOrEmpty(functionName))
+            if (string.IsNullOrEmpty(funcName))
                 throw new ArgumentException("Function name is empty.");
 
-            return _functions.TryGetValue(functionName, out var function)? function: null;
+            return _functions.TryGetValue(funcName, out var function)? function: Functions.GetFunction(funcName);
         }
 
         /// <summary>

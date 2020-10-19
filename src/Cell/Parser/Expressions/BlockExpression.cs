@@ -15,11 +15,17 @@ namespace Cell.Parser.Expressions
         public IList<IExpression> Body { get; private set; }
 
         /// <inheritdoc/>
-        public object Evaluate(ICellContext context)
+        public object Evaluate(ICellContext context, out string error)
         {
+            error = null;
             object result = null;
             foreach (var statement in Body)
-                result = statement.Evaluate(context);
+            {
+                result = statement.Evaluate(context, out error);
+                if (error is object)
+                    return null;
+            }
+
             return result;
         }
 

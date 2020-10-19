@@ -18,6 +18,7 @@ class Program
     private static void RunRepl()
     {
         bool needMore = false;
+        var context = new Cell.Runtime.CellContext();
         IList<Token> tokenList = new List<Token>();
         while (true)
         {
@@ -35,9 +36,12 @@ class Program
                 case TokenizerResult.Ok:
                 {
                     var expression = Parser.Parse(tokenList, out errorString);
-
                     if (expression is object)
-                        Console.WriteLine(expression.Inspect());
+                    {
+                        var result = expression.Evaluate(context, out errorString);
+                        if (errorString is object)
+                            PrintError(errorString);
+                    }
                     else if (expression is null && errorString is object)
                         PrintError(errorString);
 

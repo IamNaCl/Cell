@@ -11,7 +11,11 @@ namespace Cell.Parser.Expressions
         public object Literal { get; }
 
         /// <inheritdoc/>
-        public object Evaluate(Runtime.ICellContext context) => Literal;
+        public object Evaluate(Runtime.ICellContext context, out string error)
+        {
+            error = null;
+            return Literal;
+        }
 
         /// <inheritdoc/>
         public string Inspect() => $"{Literal.ToString()}";
