@@ -17,7 +17,7 @@ namespace Cell.Runtime
         /// <summary>
         /// Gets a range.
         /// </summary>
-        IEnumerable<KeyValuePair<int, object>> this[int startIndex, int endIndex] { get; }
+        IReadOnlyDictionary<int, object> this[int startIndex, int endIndex] { get; }
 
         /// <summary>
         /// Gets a function defined in this context by its name, or null if it doesn't exist.
@@ -50,7 +50,7 @@ namespace Cell.Runtime
         /// Enumerable of int/object pairs, the key represents the index of the cell and the value is the actual value
         /// under that cell, if null then the cell is empty.
         /// </returns>
-        IEnumerable<KeyValuePair<int, object>> GetRange(int startIndex, int endIndex);
+        IReadOnlyDictionary<int, object> GetRange(int startIndex, int endIndex);
 
         /// <summary>
         /// Sets an entire range to a specific value.
@@ -66,11 +66,11 @@ namespace Cell.Runtime
         /// If the destination range is emaller than the source range, only destination.length is copied.
         /// If any of the values within source range is null then the value will be removed from the destination range.
         /// </summary>
-        /// <param name="sourceStartIndex">Start index of the source range.</param>
-        /// <param name="sourceEndIndex">End index of the source range.</param>
-        /// <param name="destStartIndex">Start index of the destination range.</param>
-        /// <param name="destEndIndex">End index of the destination range.</param>
-        void SetRange(int sourceStartIndex, int sourceEndIndex, int destStartIndex, int destEndIndex);
+        /// <param name="sourceStart">Start index of the source range.</param>
+        /// <param name="sourceEnd">End index of the source range.</param>
+        /// <param name="destStart">Start index of the destination range.</param>
+        /// <param name="destEnd">End index of the destination range.</param>
+        void SetRange(int sourceStart, int sourceEnd, int destStart, int destEnd);
         #endregion
     }
 }

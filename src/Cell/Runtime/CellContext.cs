@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Cell.Runtime
 {
@@ -27,8 +28,42 @@ namespace Cell.Runtime
         public IFunction this[string functionName] => GetFunction(functionName);
 
         /// <inheritdoc/>
-        public IEnumerable<KeyValuePair<int, object>> this[int startIndex, int endIndex] =>
+        public IReadOnlyDictionary<int, object> this[int startIndex, int endIndex] =>
             GetRange(startIndex, endIndex);
+        #endregion
+
+        #region Private Functions
+        /// <summary>
+        /// Gets a condition for a for loop.
+        /// </summary>
+        /// <param name="increases">Whether to reach length or to come from length.</param>
+        /// <returns>Instance of Func`3.</returns>
+        private Func<int, int, bool> GetCondition(bool increases)
+        {
+            // Cannot match lambdas for some reason...
+            if (increases)
+                return (index, length) => index <= length;
+            else
+                return (index, length) => index >= length;
+        }
+
+        /// <summary>
+        /// Gets all the indices of a given range.
+        /// </summary>
+        /// <param name="start">Start point in the range.</param>
+        /// <param name="end">End point in the range.</param>
+        /// <returns>List of integers.</returns>
+        private IList<int> GetRangeIndexes(int start, int end)
+        {
+            var incr = end > start? 1: -1;
+            var condition = GetCondition(incr == 1);
+            var list = new List<int>(incr == 1? end - start: start - end);
+
+            for (int i = start; condition(i, end); i += incr)
+                list.Add(i);
+
+            return list;
+        }
         #endregion
 
         #region Get/Set Cell/Range/Function
@@ -51,25 +86,18 @@ namespace Cell.Runtime
         }
 
         /// <inheritdoc/>
-        public IEnumerable<KeyValuePair<int, object>> GetRange(int start, int end)
+        public IReadOnlyDictionary<int, object> GetRange(int start, int end)
         {
-            // Should we go upwards? If yes, then keep iterating while i < end
-            // Otherwise, iterate until i >= end
+            // Condition that we'll be using
             int increase = end >= start? 1: -1;
-            Predicate<int> condition = increase == 1? (_ => _ <= end): (_ => _ >= end);
-            for (int i = start; condition(i); i += increase)
-            {
-                KeyValuePair<int, object> result;
+            var condition = GetCondition(increase == 1);
+            var result = new Dictionary<int, object>();
 
-                // Request the lock and release it right before returning.
-                lock (_syncLock)
-                {
-                    _cells.TryGetValue(i, out var value);
-                    result = new KeyValuePair<int, object>(i, value);
-                }
+            lock (_syncLock)
+                for (int i = start; condition(i, end); i += increase)
+                    result.Add(i, _cells.TryGetValue(i, out var value)? value: null);
 
-                yield return result;
-            }
+            return result;
         }
 
         /// <inheritdoc/>
@@ -97,34 +125,10 @@ namespace Cell.Runtime
         {
             lock (_syncLock)
             {
-                // 1. Check the length of both ranges.
-                // 2. If the source range is smaller than the destination, then copy the source range N times.
-                // 3. If the destination range is smaller than the source, then copy destination.Length items.
-                int srcLen = Math.Max(sourceStart, sourceEnd) - Math.Min(sourceStart, sourceEnd);
-                int dstLen = Math.Max(destStart, destEnd) - Math.Min(destStart, destEnd);
-
-                // If either length is zero, don't do anything then.
-                if (srcLen <= 0 || dstLen <= 0)
-                    return;
-
-                // Do we need to increase/decrease the value of either range?
-                int inc1 = sourceEnd >= sourceStart? 1: -1;
-                int inc2 = destEnd >= destStart? 1: -1;
-
-                // Now iterate the entire thing.
-                int len = 0;
-                for (int s1 = sourceStart, s2 = destStart; len <= dstLen; s1 += inc1, s2 += inc2)
-                {
-                    object value = null;
-                    _cells.TryGetValue((s1 % srcLen) + sourceStart, out value);
-
-                    if (value is null)
-                        _cells.Remove(s2);
-                    else
-                        _cells[s2] = value;
-
-                    ++len;
-                }
+                var sourceRange = GetRange(sourceStart, sourceEnd).Values.ToArray();
+                var targetIndexes = GetRangeIndexes(destStart, destEnd);
+                for(int i = 0; i < targetIndexes.Count; i++)
+                    SetCell(targetIndexes[i], sourceRange[i % sourceRange.Length]);
             }
         }
 
